@@ -29,15 +29,25 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
       - name: Check docs changes
-        shell: pwsh
-        id: check_file_changes
+        id: check_file_changed
+        shell: bash
         run: |
-          $diff = git diff --name-only HEAD^ HEAD
-          $SourceDiff = $diff | Where-Object { $_ -match '^docs/' -or $_ -match '.md$' }
-          $HasDiff = $SourceDiff.Length -gt 0
-
-          # Set the job output docs_changed
-          "docs_changed=$HasDiff" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          # Ensure we fetch at least 2 commits history
+          git fetch --depth=2 || true
+          
+          # Detect if there is a parent commit
+          if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            diff=$(git diff --name-only HEAD~1 HEAD)
+          else
+            diff=$(git ls-files)  # First commit => all tracked files considered as changed
+          fi
+          
+          # Filter for docs changes
+          if echo "$diff" | grep -E '^docs/|\.md$' >/dev/null; then
+            echo "docs_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "docs_changed=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - run: npm i
 
