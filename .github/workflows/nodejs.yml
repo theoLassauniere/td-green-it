@@ -28,19 +28,17 @@ jobs:
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
-      - name: Check if docs/ or .md files changed
+      - name: Check docs changes
         shell: pwsh
-        id: check_file_changed
+        id: check_file_changes
         run: |
-          # Diff HEAD with the previous commit
           $diff = git diff --name-only HEAD^ HEAD
-          
-          # Check if a file under docs/ or with the .md extension has changed (added, modified, deleted)
           $SourceDiff = $diff | Where-Object { $_ -match '^docs/' -or $_ -match '.md$' }
           $HasDiff = $SourceDiff.Length -gt 0
-          
-          # Set the output named "docs_changed"
-          Write-Host "::set-output name=docs_changed::$HasDiff"
+
+          # Set the job output docs_changed
+          "docs_changed=$HasDiff" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
       - run: npm i
 
   npm_test:
